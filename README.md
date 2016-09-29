@@ -3,7 +3,7 @@
 Скрипт автоматизации формирования баз в программе BOC
 
 ## Установка:
-    git clone https://github.com/PIlyichB/boc_auto_gui.git INSTALL/DIR/
+    git clone https://github.com/BPIlyich/boc_auto_gui.git INSTALL/DIR/
     pip install -r INSTALL/DIR/requirements.txt
 
 ## Запуск:
