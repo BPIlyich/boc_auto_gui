@@ -1,0 +1,4 @@
+pywinauto==0.5.4
+#pywin32==219
+Pillow==3.3.1
+dbf==0.96.8
