@@ -3,10 +3,10 @@
 Скрипт автоматизации рутинных действий в программе BOC
 
 ## Возможности:
-- Возможность формировать и паковать в архив MAINBASE.dbf и SVODBASE.dbf
-- Возможность формировать и паковать в архив Stat456 и klients.dbf
-- Возможность формировать и паковать в архив AllReports
-- Возможность формировать и паковать в архив "Отчет для сверки с АЗС"
+- Формирование и упаковка в архив MAINBASE.dbf и SVODBASE.dbf
+- Формирование и упаковка в архив Stat456 и klients.dbf
+- Формирование и упаковка в архив AllReports
+- Формирование и упаковка в архив "Отчет для сверки с АЗС"
 
 ## Установка:
     git clone https://github.com/BPIlyich/boc_auto_gui.git INSTALL/DIR/
@@ -26,8 +26,8 @@
   - -ubd BD_USER, --bd_user BD_USER             - Пользователь БД
   - -pbd BD_PSW, --bd_psw BD_PSW                - Пароль БД
   - -eo EO                                      - Эксплуатирующая организация (по умолчанию: Ульяновский филиал ООО "Татнефть-АЗС Центр")
-  - -sd START_DATE, --start_date START_DATE     - Начальная дата в формате ГГГГ-ММ-ДД (по умолчанию: Первое число текущего месяца)
-  - -fd FINISH_DATE, --finish_date FINISH_DATE  - Конечная дата в формате ГГГГ-ММ-ДД (по умолчанию: Сегодняшнее число)
+  - -sd START_DATE, --start_date START_DATE     - Начальная дата в формате ГГГГ-ММ-ДД (по умолчанию: Первое число предыдущего месяца)
+  - -fd FINISH_DATE, --finish_date FINISH_DATE  - Конечная дата в формате ГГГГ-ММ-ДД (по умолчанию: Первое число текущего месяца)
   - -zms, --zip_mainbase_svodbase               - Запаковать в архив MAINBASE.dbf и SVODBASE.dbf
   - -zst, --zip_stat                            - Запаковать в архив Stat456 и klients.dbf
   - -zcr, --zip_client_reports                  - Запаковать в архив AllReports
