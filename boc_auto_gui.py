@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 import argparse
 import datetime
@@ -229,7 +229,8 @@ class BocAutoGui():
     def calc_stat(self):
         logger.info(u'Запускаем Расчет статистики')
         self.menu.MenuSelect(u'Подготовить данные->Расчет статистики')
-        stat_window = self.app[u'Статистика']
+        #stat_window = self.app[u'Статистика']  # <-- Иногда с другим названием?
+        stat_window = self.app.TFrmStatistics
         stat_window.Wait('exists')
         stat_window[u'Расчет статистических показателей'].Click()
         #stat_window[u'Закрыть'].Wait('enabled')  # <-- Не работает
@@ -401,7 +402,9 @@ class BocAutoGui():
 
 def main():
     today = datetime.date.today()
-    first_day = datetime.date(today.year, today.month, 1)
+    this_month_first_day = datetime.date(today.year, today.month, 1)
+    previous_month_first_day = (
+        this_month_first_day - datetime.timedelta(days=1)).replace(day=1)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--version', action='version',
@@ -415,11 +418,11 @@ def main():
         default=u'Ульяновский филиал ООО "Татнефть-АЗС Центр"'
     )
     parser.add_argument(
-        '-sd', '--start_date', type=valid_date, default=first_day,
+        '-sd', '--start_date', type=valid_date, default=previous_month_first_day,
         help=u'Начальная дата в формате ГГГГ-ММ-ДД (по умолчанию: %(default)s)'
     )
     parser.add_argument(
-        '-fd', '--finish_date', type=valid_date, default=today,
+        '-fd', '--finish_date', type=valid_date, default=this_month_first_day,
         help=u'Конечная дата в формате ГГГГ-ММ-ДД (по умолчанию: %(default)s)'
     )
     parser.add_argument(
