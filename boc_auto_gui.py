@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 import argparse
 import datetime
+import errno
 import logging
 import os
 import zipfile
@@ -32,6 +33,14 @@ logging.basicConfig(
     format='[%(asctime)s] [%(levelname)-8s] %(message)s',
     level=logging.INFO)
 ################################################################################
+
+
+def create_dir_if_not_exists(dir):
+    try:
+        os.makedirs(dir)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
 
 
 def compress_to_zip(input_files, output_file):
@@ -92,6 +101,8 @@ class BocAutoGui():
             logger.exception(u'Не удалось запустить приложение')
             raise
         self.menu = self.app['TOraTypeMain']
+        self.output_dir = os.path.join(FILE_DIR_PATH, 'output')
+        create_dir_if_not_exists(self.output_dir)
 
     def kill_process(self):
         logger.warning(u'Убиваем процесс...')
@@ -99,7 +110,7 @@ class BocAutoGui():
 
     def make_top_window_screenshot(self):
         img_path = os.path.join(
-            FILE_DIR_PATH,
+            self.output_dir,
             'error_{:%Y%m%d_%H%M%S}.png'.format(datetime.datetime.now())
         )
         try:
@@ -299,7 +310,7 @@ class BocAutoGui():
                     self.start_date, self.finish_date, NOW, i+1
                 )
             )
-            output_path = os.path.join(FILE_DIR_PATH, filename)
+            output_path = os.path.join(self.output_dir, filename)
             params_window.Wait('exists')
             params_window[u'Ок'].Click()
 
@@ -320,7 +331,7 @@ class BocAutoGui():
             os.path.join(self.boc_dir_path, 'SVODBASE.dbf'),
         )
         output_file = os.path.join(
-            FILE_DIR_PATH,
+            self.output_dir,
             'base456_{:%Y%m%d}-{:%Y%m%d}_{:%Y%m%d%H%M%S}.zip'.format(
                 self.start_date, self.finish_date, NOW
             )
@@ -335,7 +346,7 @@ class BocAutoGui():
             os.path.join(self.boc_dir_path, 'klients.dbf'),
         )
         output_file = os.path.join(
-            FILE_DIR_PATH,
+            self.output_dir,
             'stat456_{:%Y%m%d}-{:%Y%m%d}_{:%Y%m%d%H%M%S}.zip'.format(
                 self.start_date, self.finish_date, NOW
             )
@@ -347,7 +358,7 @@ class BocAutoGui():
     def make_client_reports_zip(self):
         input_files = os.path.join(self.boc_dir_path, 'AllReports')
         output_file = os.path.join(
-            FILE_DIR_PATH,
+            self.output_dir,
             'reports_{:%Y%m%d}-{:%Y%m%d}_{:%Y%m%d%H%M%S}.zip'.format(
                 self.start_date, self.finish_date, NOW
             )
@@ -358,7 +369,7 @@ class BocAutoGui():
 
     def make_gs_report_zip(self, input_files):
         output_file = os.path.join(
-            FILE_DIR_PATH,
+            self.output_dir,
             'gs_report_{:%Y%m%d}-{:%Y%m%d}_{:%Y%m%d%H%M%S}.zip'.format(
                 self.start_date, self.finish_date, NOW
             )

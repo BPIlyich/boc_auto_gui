@@ -2,3 +2,6 @@
 *.log
 *.png
 *.zip
+*.komodoproject
+.komodotools
+output
