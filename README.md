@@ -13,15 +13,16 @@
     pip install -r INSTALL/DIR/requirements.txt
 
 ## Запуск:
-    python INSTALL/DIR/boc_auto_gui.py "PATH/TO/BOC.EXE"
+    python INSTALL/DIR/boc_auto_gui.py -b "PATH/TO/BOC.EXE"
 
 ## Принимаемые аргументы:
 - Обязательные:
-  - Путь до BOC.exe
+  - -b BOC_PATH, --boc_path BOC_PATH            - Путь до BOC.exe
 - Необязательные:
   - -h, --help                                  - Справка
   - -v, --version                               - Версия программы
 
+  - -c CONFIG, --config CONFIG                  - Путь до файла настроек
   - -nbd BD_NAME, --bd_name BD_NAME             - Сервер БД
   - -ubd BD_USER, --bd_user BD_USER             - Пользователь БД
   - -pbd BD_PSW, --bd_psw BD_PSW                - Пароль БД
@@ -36,3 +37,11 @@
 ## Примечание:
 - Если не указаны ВСЕ аргументы из списка [Сервер БД, Пользователь БД, Пароль БД] и в BOC эти поля тоже не заполнены, скрипт завершится неудачей.
 - Тестировалось на версии BOC 8.0
+- Консольные аргументы имеют приоритет над параметрами из файла настроек
+- Файл настроек должен быть в кодировке cp1251
+
+## Пример файла настроек
+```ini
+eo: Ульяновский филиал ООО "Татнефть-АЗС Центр"
+zip_mainbase_svodbase: true
+```

@@ -2,6 +2,7 @@
 *.log
 *.png
 *.zip
+*.ini
 *.komodoproject
 .komodotools
 output

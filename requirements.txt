@@ -1,4 +1,6 @@
-pywinauto==0.5.4
+pywinauto==0.6.1
 #pywin32==219
 Pillow==3.3.1
 dbf==0.96.8
+#enum34 # for python 2
+ConfigArgParse==0.11.0

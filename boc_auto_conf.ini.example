@@ -1,0 +1,34 @@
+[Settings]
+;Путь до BOC
+boc_path = \\path\to\Otchet_BOC.exe
+;Эксплуатирующая организация. Будет использована для заполнения поля "Чей клиент" списка клиентов
+ekspl_org = ООО "Рога и копыта"
+
+;bd_name/bd_user/bd_psw - имя базы/пользователь/пароль
+;эти поля можно не указывать
+;bd_name = YOURLOGIN
+;bd_user = YOURUSER
+;bd_psw = YOURPASSWORD
+
+mail_host = smtp.yandex.ru
+mail_port = 465
+from_addr = LOGIN@yandex.ru
+mail_password = PASSWORD
+;список адресов для которых будет отправлена "слепая" копия
+bcc_addr = [EXAMPLE@gmail.com]
+;адрес, который предлагается для ответа
+reply_addr = EXAMPLE@gmail.com
+;список адресов для отправки MAINBASE.dbf и SVODBASE.dbf
+to_addr_bases = [EXAMPLE2@gmail.com, EXAMPLE@yandex.ru]
+;список адресов на которые будут высланы отчеты по клиентам
+to_addr_client_reports = [EXAMPLE2@gmail.com, EXAMPLE@gmail.com]
+;список адресов на которые будут высланы отчеты для сверки с АЗС
+to_addr_gs_report = [EXAMPLE2@gmail.com, EXAMPLE@ya.ru]
+;список адресов на которые будет выслана статистика
+to_addr_stat = [EXAMPLE2@gmail.com]
+
+;если нижепредставленные флаги не закоментированы, соответствующие отчеты будут сформированы и высланы
+zip_mainbase_svodbase
+zip_stat
+zip_client_reports
+zip_gs_report
