@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 import datetime
 import errno
@@ -43,6 +43,30 @@ logging.basicConfig(
     format=u'[%(asctime)s] [%(levelname)-8s] %(message)s',
     level=logging.INFO)
 ################################################################################
+
+
+def get_date_via_dialog(date_, start=True):
+    today = datetime.date.today()
+    choosen_date = False
+    while not choosen_date:
+        msg = (
+            u'Введите {} дату в формате ГГГГ-ММ-ДД (по умолчанию: {}) '
+            u'или только число для выбора даты в текущем месяце: '.format(
+                u'начальную' if start else u'конечную', date_)
+        )
+        in_str = input(msg)
+        if not in_str:
+            choosen_date = date_
+        else:
+            try:
+                choosen_date = datetime.datetime.strptime(
+                    in_str, '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    choosen_date = today.replace(day=int(in_str))
+                except ValueError:
+                    print(u'Неверный формат ввода')
+    return choosen_date
 
 
 def create_dir_if_not_exists(dir):
@@ -634,8 +658,19 @@ def main():
         '-zgr', '--zip_gs_report', action='store_true',
         help=u'Запаковать в архив "Отчет для сверки с АЗС"'
     )
+    # XXX new arg
+    parser.add_argument(
+        '-npd', '--no_period_dialog', action='store_true',
+        help=u'Не требовать подтверждение временного периода'
+    )
 
     args = parser.parse_args()
+
+    #if not args.no_period_dialog or not all([args.start_date, args.finish_date]):
+    if not (args.no_period_dialog and all([args.start_date, args.finish_date])):
+        args.finish_date = get_date_via_dialog(args.finish_date, False)
+        args.start_date = get_date_via_dialog(args.finish_date.replace(day=1))
+
     logger.info(u'Переданные аргументы: {}'.format(args))
 
     working_dir = os.path.dirname(args.boc_path)
