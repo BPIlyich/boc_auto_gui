@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 
 import datetime
 import errno
@@ -25,7 +25,8 @@ except NameError:
     FileNotFoundError = IOError
 
 NOW = datetime.datetime.now()
-FILE_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+#FILE_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+FILE_DIR_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 ################################### logging ####################################
@@ -104,7 +105,7 @@ def get_dbf_empty_field_value(table, fieldname):
 
 def valid_file(value):
     if os.path.isfile(value):
-        return value
+        return os.path.abspath(value)
     raise configargparse.ArgumentTypeError('{} is not a file'.format(value))
 
 
@@ -311,6 +312,7 @@ class BocAutoGui():
         clients_window[u'Добавить'].Click()
         clients_window['TDBNavigator'].Wait('ready')
         clients_window[u'ОК'].SetFocus()
+        clients_window[u'ОК'].Wait('ready')
         clients_window[u'ОК'].Click()
         clients_window.WaitNot('visible')
         self.menu.Wait('ready')
@@ -658,7 +660,6 @@ def main():
         '-zgr', '--zip_gs_report', action='store_true',
         help=u'Запаковать в архив "Отчет для сверки с АЗС"'
     )
-    # XXX new arg
     parser.add_argument(
         '-npd', '--no_period_dialog', action='store_true',
         help=u'Не требовать подтверждение временного периода'
@@ -666,7 +667,6 @@ def main():
 
     args = parser.parse_args()
 
-    #if not args.no_period_dialog or not all([args.start_date, args.finish_date]):
     if not (args.no_period_dialog and all([args.start_date, args.finish_date])):
         args.finish_date = get_date_via_dialog(args.finish_date, False)
         args.start_date = get_date_via_dialog(args.finish_date.replace(day=1))
