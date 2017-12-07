@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-__version__ = '0.3.2'
+__version__ = '0.3.3'
+__boc_version__ = '8.0'
 
 import datetime
 import errno
@@ -172,7 +173,8 @@ class BocAutoGui():
                  reply_addr, to_addr_bases, to_addr_client_reports,
                  to_addr_gs_report, to_addr_stat,
                  start_date, finish_date, zip_mainbase_svodbase, zip_stat,
-                 zip_client_reports, zip_gs_report):
+                 zip_client_reports, zip_gs_report,
+                 with_openway):
         self.boc_dir_path = os.path.dirname(boc_path)
         self.bd_name = bd_name
         self.bd_user = bd_user
@@ -184,6 +186,7 @@ class BocAutoGui():
         self.need_client_reports = zip_client_reports
         self.need_gs_report = zip_gs_report
         self.need_stat = zip_stat
+        self.with_openway = with_openway
 
         self.mail_host = mail_host
         self.mail_port = mail_port
@@ -336,13 +339,14 @@ class BocAutoGui():
         WaitUntil(180, 5, self.is_task_finished)
 
     def form_mainbase_and_svodbase(self):
-        logger.info(
-            u'Формируем MAINBASE.dbf и SVODBASE.dbf '
-            u'с {:%d.%m.%Y} по {:%d.%m.%Y}'.format(
-                self.start_date, self.finish_date)
-        )
-        self.menu.MenuSelect(
-            u'Новые запросы->Сформировать M&AINBASE.dbf и SVODBASE.dbf')
+        if self.with_openway:
+            log_str = u'Формируем MAINBASE и SVODBASE + OpenWay с {:%d.%m.%Y} по {:%d.%m.%Y}'
+            menuitem_str = u'Новые запросы->Сформировать MA&INBASE и SVODBASE + OpenWay'
+        else:
+            log_str = u'Формируем MAINBASE и SVODBASE с {:%d.%m.%Y} по {:%d.%m.%Y}'
+            menuitem_str = u'Новые запросы->Сформировать M&AINBASE и SVODBASE'
+        logger.info(log_str.format(self.start_date, self.finish_date))
+        self.menu.MenuSelect(menuitem_str)
         self.fill_date_period()
         WaitUntil(300, 5, self.is_task_finished)
 
@@ -540,9 +544,19 @@ class BocAutoGui():
         # XXX Желательно выполнять операции, несвязанные с GUI, после закрытия окна BOC.
         self.login()
         self.fill_clients()
-        self.fill_companies()
+        # TODO придумать нормальную переменную
+        # flag = False когда мы хотим только заполнить ЭО для клиентов в Авроре
+        flag = any((
+            self.need_archive_mainbase_and_svodbase,
+            self.need_stat,
+            self.need_client_reports,
+            self.need_gs_report
+        ))
+        if flag:
+            self.fill_companies()
         self.fill_oracle()
-        self.form_mainbase_and_svodbase()
+        if flag:
+            self.form_mainbase_and_svodbase()
         if self.need_archive_mainbase_and_svodbase:
             file_ = self.make_base_zip()
             self.add_mail_to_delivery(file_, self.to_addr_bases)
@@ -664,6 +678,10 @@ def main():
         '-npd', '--no_period_dialog', action='store_true',
         help=u'Не требовать подтверждение временного периода'
     )
+    parser.add_argument(
+        '-wow', '--with_openway', action='store_true',
+        help=u'Формирование MainBase и SvodBase с учетом OpenWay'
+    )
 
     args = parser.parse_args()
 
@@ -699,7 +717,8 @@ def main():
         zip_mainbase_svodbase=args.zip_mainbase_svodbase,
         zip_stat=args.zip_stat,
         zip_client_reports=args.zip_client_reports,
-        zip_gs_report=args.zip_gs_report
+        zip_gs_report=args.zip_gs_report,
+        with_openway=args.with_openway
     )
     try:
         boc_auto.run()
