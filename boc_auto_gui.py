@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__version__ = '0.3.3'
+__version__ = '0.3.4'
 __boc_version__ = '8.0'
 
 import datetime
@@ -13,6 +13,10 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 import configargparse
 import dbf
@@ -174,7 +178,7 @@ class BocAutoGui():
                  to_addr_gs_report, to_addr_stat,
                  start_date, finish_date, zip_mainbase_svodbase, zip_stat,
                  zip_client_reports, zip_gs_report,
-                 with_openway):
+                 emitents_dict):
         self.boc_dir_path = os.path.dirname(boc_path)
         self.bd_name = bd_name
         self.bd_user = bd_user
@@ -186,7 +190,6 @@ class BocAutoGui():
         self.need_client_reports = zip_client_reports
         self.need_gs_report = zip_gs_report
         self.need_stat = zip_stat
-        self.with_openway = with_openway
 
         self.mail_host = mail_host
         self.mail_port = mail_port
@@ -198,12 +201,18 @@ class BocAutoGui():
         self.to_addr_client_reports = to_addr_client_reports
         self.to_addr_gs_report = to_addr_gs_report
         self.to_addr_stat = to_addr_stat
+        self.emitents_dict = emitents_dict
         self.message = u'\n'.join([
             u'Файл вложен и отправлен автоматически.',
             u'Просьба отвечать на адрес {}'.format(self.reply_addr),
             u'---',
             u'Ульяновский филиал ООО "Процессинговый Центр"'
         ])
+        # Записываем сюда как сформированы MAINBASE и SVODBASE:
+        # None - не формированы (состояние по умолчанию)
+        # False - сформированы без OpenWay
+        # True - сформированы с OpenWay
+        self.bases_gen_with_openway = None
 
         self.mails = list()
 
@@ -257,6 +266,35 @@ class BocAutoGui():
                 count))
         else:
             logger.info(u'Столбец "Чей клиент" заполнять не требуется')
+
+    def fill_eo_in_eksplorg_dbf(self):
+        emitent_dct = self.emitents_dict
+        count_good = count_bad = 0
+        table_path = os.path.join(self.boc_dir_path, 'EKSPLORG.dbf')
+        table = dbf.Table(table_path, codepage='cp1251')
+        logger.info(u'Открываем EKSPLORG.dbf для заполнения ЭО')
+        with table:
+            # TODO: заполнение ЭО по "похожести"
+            ind = table.create_index(lambda rec: rec.nameekspl)
+            empty_value = get_dbf_empty_field_value(table, 'nameekspl')
+            records = ind.search(match=(empty_value, ))
+            for record in dbf.Process(records):
+                if record.id_gde in emitent_dct:
+                    logger.info(u'Заполняем ЭО для терминала {} с номером эмитента {}'.format(
+                        record.terminal, record.id_gde))
+                    record.nameekspl = emitent_dct[record.id_gde]
+                    count_good += 1
+                else:
+                    logger.warning(u'Для терминала {} с номером эмитента {} нет соответсвий в таблице ЭО'.format(
+                        record.terminal, record.id_gde))
+                    count_bad += 1
+        if count_good:
+            logger.info(u'Заполнили столбец "ЭО" для {} строк'.format(
+                count_good))
+        if count_bad:
+            logger.info(u'Не удалось заполнить столбец "ЭО" для {} строк'.format(count_bad))
+        if not count_good and not count_bad:
+            logger.info(u'Столбец "ЭО" заполнять не требуется')
 
     def fix_mainbase_dbf(self):
         table_path = os.path.join(self.boc_dir_path, 'MAINBASE.dbf')
@@ -333,18 +371,22 @@ class BocAutoGui():
         eo_window.WaitNot('visible')
         self.menu.Wait('ready')
 
+        self.fill_eo_in_eksplorg_dbf()
+
     def fill_oracle(self):
         logger.info(u'Переносим справочники в Oracle')
         self.menu.MenuSelect(u'Новые запросы->Перенос справочников в &Oracle')
         WaitUntil(180, 5, self.is_task_finished)
 
-    def form_mainbase_and_svodbase(self):
-        if self.with_openway:
+    def form_mainbase_and_svodbase(self, with_openway):
+        if with_openway:
             log_str = u'Формируем MAINBASE и SVODBASE + OpenWay с {:%d.%m.%Y} по {:%d.%m.%Y}'
             menuitem_str = u'Новые запросы->Сформировать MA&INBASE и SVODBASE + OpenWay'
+            self.bases_gen_with_openway = True
         else:
             log_str = u'Формируем MAINBASE и SVODBASE с {:%d.%m.%Y} по {:%d.%m.%Y}'
             menuitem_str = u'Новые запросы->Сформировать M&AINBASE и SVODBASE'
+            self.bases_gen_with_openway = False
         logger.info(log_str.format(self.start_date, self.finish_date))
         self.menu.MenuSelect(menuitem_str)
         self.fill_date_period()
@@ -544,32 +586,29 @@ class BocAutoGui():
         # XXX Желательно выполнять операции, несвязанные с GUI, после закрытия окна BOC.
         self.login()
         self.fill_clients()
-        # TODO придумать нормальную переменную
-        # flag = False когда мы хотим только заполнить ЭО для клиентов в Авроре
-        flag = any((
-            self.need_archive_mainbase_and_svodbase,
-            self.need_stat,
-            self.need_client_reports,
-            self.need_gs_report
-        ))
-        if flag:
-            self.fill_companies()
+        self.fill_companies()
         self.fill_oracle()
-        if flag:
-            self.form_mainbase_and_svodbase()
         if self.need_archive_mainbase_and_svodbase:
+            if self.bases_gen_with_openway is not False:
+                self.form_mainbase_and_svodbase(with_openway=False)
             file_ = self.make_base_zip()
             self.add_mail_to_delivery(file_, self.to_addr_bases)
         if self.need_stat:
+            if self.bases_gen_with_openway is not False:
+                self.form_mainbase_and_svodbase(with_openway=False)
             self.form_mainlnr()
             self.calc_stat()
             file_ = self.make_stat_zip()
             self.add_mail_to_delivery(file_, self.to_addr_stat)
         if self.need_client_reports:
+            if self.bases_gen_with_openway is not True:
+                self.form_mainbase_and_svodbase(with_openway=True)
             self.make_client_reports()
             file_ = self.make_client_reports_zip()
             self.add_mail_to_delivery(file_, self.to_addr_client_reports)
         if self.need_gs_report:
+            if self.bases_gen_with_openway is not True:
+                self.form_mainbase_and_svodbase(with_openway=True)
             input_files = self.make_gs_report()
             file_ = self.make_gs_report_zip(input_files)
             self.add_mail_to_delivery(file_, self.to_addr_gs_report)
@@ -603,6 +642,8 @@ def main():
                         help='Файл конфигурации')
     parser.add_argument('-b', '--boc_path', type=valid_file, required=True,
                         help=u'Путь до BOC')
+    parser.add_argument('-e', '--emitents_path', type=valid_file, required=False,
+                        help=u'Путь до ini-файла с эмитентами')
     parser.add_argument('-nbd', '--bd_name', help=u'Сервер БД')
     parser.add_argument('-ubd', '--bd_user', help=u'Пользователь БД')
     parser.add_argument('-pbd', '--bd_psw', help=u'Пароль БД')
@@ -678,10 +719,6 @@ def main():
         '-npd', '--no_period_dialog', action='store_true',
         help=u'Не требовать подтверждение временного периода'
     )
-    parser.add_argument(
-        '-wow', '--with_openway', action='store_true',
-        help=u'Формирование MainBase и SvodBase с учетом OpenWay'
-    )
 
     args = parser.parse_args()
 
@@ -692,7 +729,19 @@ def main():
     logger.info(u'Переданные аргументы: {}'.format(args))
 
     working_dir = os.path.dirname(args.boc_path)
+    #emitents_ini = os.path.join(working_dir, 'emitents.ini')
     os.chdir(working_dir)
+
+    emitents_dict = {}
+    if args.emitents_path:
+        config = configparser.ConfigParser()
+        config.read(args.emitents_path)
+        try:
+            emitents_dict = {int(k): v for k, v in config.items('Emitents')}
+        except configparser.NoSectionError:
+            logger.warning(u'Файл с привязкой номеров и названий эмитентов заполнен некорректно')
+    else:
+        logger.warning(u'Файл с привязкой номеров и названий эмитентов не задан')
 
     boc_auto = BocAutoGui(
         boc_path=args.boc_path,
@@ -718,7 +767,7 @@ def main():
         zip_stat=args.zip_stat,
         zip_client_reports=args.zip_client_reports,
         zip_gs_report=args.zip_gs_report,
-        with_openway=args.with_openway
+        emitents_dict=emitents_dict
     )
     try:
         boc_auto.run()
@@ -732,6 +781,5 @@ def main():
 if __name__ == '__main__':
     main()
 
-# XXX если в eksplorg не задана Эксплаутирующая организация для терминала будет вызвана ошибка
-# Предлагать заполнять это поле вручную?
+
 # Уточнить обязательные/необязательные аргументы для скрипта
